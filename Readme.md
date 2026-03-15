@@ -62,4 +62,3 @@ Respon
 ## Tampilan
 # Input
 ![Input.png](ss/Input.png)
-![Input.png](ss/Input.png)
