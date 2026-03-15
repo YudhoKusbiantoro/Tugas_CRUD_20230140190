@@ -2,33 +2,33 @@
 const API_URL = '/ktp';  // Relative path (bukan http://localhost:8080/ktp)
 
 // Document Ready
-$(document).ready(function() {
+$(document).ready(function () {
     // Load data saat halaman pertama kali dibuka
     loadData();
 
     // Form Submit Handler
-    $('#ktpForm').on('submit', function(e) {
+    $('#ktpForm').on('submit', function (e) {
         e.preventDefault();
         submitForm();
     });
 
     // Reset Button Handler
-    $('#btnReset').on('click', function() {
+    $('#btnReset').on('click', function () {
         resetForm();
     });
 
     // Cancel Button Handler
-    $('#btnCancel').on('click', function() {
+    $('#btnCancel').on('click', function () {
         cancelEdit();
     });
 
     // Refresh Button Handler
-    $('#btnRefresh').on('click', function() {
+    $('#btnRefresh').on('click', function () {
         loadData();
     });
 
     // Close Notification
-    $('#notifClose').on('click', function() {
+    $('#notifClose').on('click', function () {
         hideNotification();
     });
 });
@@ -42,7 +42,7 @@ function loadData() {
     $.ajax({
         url: API_URL,
         method: 'GET',
-        success: function(response) {
+        success: function (response) {
             $('#loading').hide();
 
             if (response.success && response.data.length > 0) {
@@ -51,7 +51,7 @@ function loadData() {
                 $('#noData').show();
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             $('#loading').hide();
             showNotification('Error mengambil data: ' + error, 'error');
             console.error('Error:', error);
@@ -125,31 +125,49 @@ function submitForm() {
         return;
     }
 
-    // Determine if Create or Update
-    const url = id ? `${API_URL}/${id}` : API_URL;
-    const method = id ? 'PUT' : 'POST';
-    const message = id ? 'Data berhasil diperbarui!' : 'Data berhasil ditambahkan!';
-
-    $.ajax({
-        url: url,
-        method: method,
-        contentType: 'application/json',
-        data: JSON.stringify(formData),
-        success: function(response) {
-            if (response.success) {
-                showNotification(message, 'success');
-                resetForm();
-                loadData();
-            } else {
-                showNotification(response.message || 'Terjadi kesalahan!', 'error');
+    if (!id) {
+        // Create mode
+        $.ajax({
+            url: API_URL,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function (response) {
+                if (response.success) {
+                    showNotification('Data berhasil ditambahkan!', 'success');
+                    resetForm();
+                    loadData();
+                } else {
+                    showNotification(response.message || 'Terjadi kesalahan!', 'error');
+                }
+            },
+            error: function (xhr, status, error) {
+                var errorMsg = xhr.responseJSON ? xhr.responseJSON.message : error;
+                showNotification('Error: ' + errorMsg, 'error');
             }
-        },
-        error: function(xhr, status, error) {
-            const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : error;
-            showNotification('Error: ' + errorMsg, 'error');
-            console.error('Error:', error);
-        }
-    });
+        });
+    } else {
+        // Update mode
+        $.ajax({
+            url: API_URL + '/' + id,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function (response) {
+                if (response.success) {
+                    showNotification('Data berhasil diperbarui!', 'success');
+                    resetForm();
+                    loadData();
+                } else {
+                    showNotification(response.message || 'Terjadi kesalahan!', 'error');
+                }
+            },
+            error: function (xhr, status, error) {
+                var errorMsg = xhr.responseJSON ? xhr.responseJSON.message : error;
+                showNotification('Error: ' + errorMsg, 'error');
+            }
+        });
+    }
 }
 
 // Function to Edit Data
@@ -157,7 +175,7 @@ function editData(id) {
     $.ajax({
         url: `${API_URL}/${id}`,
         method: 'GET',
-        success: function(response) {
+        success: function (response) {
             if (response.success) {
                 const data = response.data;
 
@@ -182,7 +200,7 @@ function editData(id) {
                 showNotification('Silakan edit data', 'info');
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             showNotification('Error mengambil data: ' + error, 'error');
             console.error('Error:', error);
         }
@@ -191,25 +209,36 @@ function editData(id) {
 
 // Function to Delete Data
 function deleteData(id) {
-    if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
-        $.ajax({
-            url: `${API_URL}/${id}`,
-            method: 'DELETE',
-            success: function(response) {
-                if (response.success) {
-                    showNotification('Data berhasil dihapus!', 'success');
-                    loadData();
-                } else {
-                    showNotification(response.message || 'Gagal menghapus data!', 'error');
+    Swal.fire({
+        title: 'Apakah Anda yakin?',
+        text: "Data KTP ini akan dihapus secara permanen!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, hapus!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: `${API_URL}/${id}`,
+                method: 'DELETE',
+                success: function (response) {
+                    if (response.success) {
+                        showNotification('Data berhasil dihapus!', 'success');
+                        loadData();
+                    } else {
+                        showNotification(response.message || 'Gagal menghapus data!', 'error');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : error;
+                    showNotification('Error: ' + errorMsg, 'error');
+                    console.error('Error:', error);
                 }
-            },
-            error: function(xhr, status, error) {
-                const errorMsg = xhr.responseJSON ? xhr.responseJSON.message : error;
-                showNotification('Error: ' + errorMsg, 'error');
-                console.error('Error:', error);
-            }
-        });
-    }
+            });
+        }
+    });
 }
 
 // Function to Reset Form
@@ -228,17 +257,22 @@ function cancelEdit() {
 
 // Function to Show Notification
 function showNotification(message, type = 'info') {
-    const $notif = $('#notification');
-    const $message = $('#notifMessage');
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.onmouseenter = Swal.stopTimer;
+            toast.onmouseleave = Swal.resumeTimer;
+        }
+    });
 
-    $notif.removeClass('success error info');
-    $notif.addClass(type + ' show');
-    $message.text(message);
-
-    // Auto hide after 5 seconds
-    setTimeout(function() {
-        hideNotification();
-    }, 5000);
+    Toast.fire({
+        icon: type === 'error' ? 'error' : (type === 'success' ? 'success' : 'info'),
+        title: message
+    });
 }
 
 // Function to Hide Notification
