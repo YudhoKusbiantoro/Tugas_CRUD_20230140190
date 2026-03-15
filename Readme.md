@@ -59,3 +59,6 @@ Respon
     "message": "Data KTP berhasil dihapus"
 }
 ```
+
+## Tampilan
+# Input Data
